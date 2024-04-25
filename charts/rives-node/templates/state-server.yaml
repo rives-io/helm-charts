@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rives-node.fullname" . }}-state-server
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.state_server.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rives-node.selectorLabels" . | nindent 6 }}
+      app.kubernets.io/component: state-server
+  template:
+    metadata:
+      {{- with .Values.state_server.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rives-node.selectorLabels" . | nindent 8 }}
+        app.kubernets.io/component: state-server
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: state-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          command:
+            - "/usr/bin/cartesi-rollups-state-server"
+
+          env:
+            - name: LOG_ENABLE_TIMESTAMP
+              value: "{{ .Values.state_server.log_enable_timestamp }}"
+
+            - name: LOG_ENABLE_COLOR
+              value: "{{ .Values.state_server.log_enable_color }}"
+
+            - name: RUST_LOG
+              value: {{ .Values.state_server.rust_log }}
+
+            - name: SF_CONCURRENT_EVENTS_FETCH
+              value: "{{ .Values.state_server.concurrent_events_fetch }}"
+
+            - name: SS_SERVER_ADDRESS
+              value: "0.0.0.0:{{ .Values.state_server.port }}"
+
+            - name: CHAIN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: id
+
+            - name: SF_GENESIS_BLOCK
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: input_box_block
+
+            - name: SF_SAFETY_MARGIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: finality_offset
+
+            - name: BH_WS_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: ws_endpoint
+
+            - name: BH_HTTP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: http_endpoint
+
+            - name: BLOCKCHAIN_BLOCK_TIMEOUT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: block_timeout
+          ports:
+            - name: http
+              containerPort: {{ .Values.state_server.port }}
+              protocol: TCP
+
+          resources:
+            {{- toYaml .Values.state_server.resources | nindent 12 }}
+
+      {{- with .Values.state_server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.state_server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.state_server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rives-node.fullname" . }}-state-server
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.state_server.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+
+  selector:
+    {{- include "rives-node.selectorLabels" . | nindent 4 }}
+    app.kubernets.io/component: state-server
+
+

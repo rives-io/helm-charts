@@ -1,0 +1,200 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rives-node.fullname" . }}-server-manager
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.server_manager.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rives-node.selectorLabels" . | nindent 6 }}
+      app.kubernets.io/component: server-manager
+  template:
+    metadata:
+      {{- with .Values.server_manager.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rives-node.selectorLabels" . | nindent 8 }}
+        app.kubernets.io/component: server-manager
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+        - name: init-snapshots
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          command:
+            - /bin/bash
+            - "-c"
+            - |
+                if [[ ! -f {{ .Values.server_manager.snapshot_dir }}/hash ]]; then
+                  mkdir -p {{ .Values.server_manager.snapshot_dir }}
+                  cp -r {{ .Values.server_manager.seed_image_dir }}/* {{ .Values.server_manager.snapshot_dir }}
+                fi
+          volumeMounts:
+            - mountPath: "{{ .Values.server_manager.snapshot_dir }}"
+              name: snapshots
+
+      containers:
+        - name: server-manager
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          command:
+            - "/usr/bin/server-manager"
+            - "--manager-address=0.0.0.0:{{ .Values.server_manager.port }}"
+
+          volumeMounts:
+            - mountPath: "{{ .Values.server_manager.snapshot_dir }}"
+              name: snapshots
+
+          env:
+            - name: REMOTE_CARTESI_MACHINE_LOG_LEVEL
+              value: "{{ .Values.server_manager.cartesi_machine_log_level }}"
+
+            - name: SERVER_MANAGER_LOG_LEVEL
+              value: "{{ .Values.server_manager.log_level }}"
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.server_manager.port }}
+              protocol: TCP
+
+          resources:
+            {{- toYaml .Values.server_manager.resources | nindent 12 }}
+
+        - name: advance-runner
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          command:
+            - "/usr/bin/cartesi-rollups-advance-runner"
+
+          volumeMounts:
+            - mountPath: "{{ .Values.server_manager.snapshot_dir }}"
+              name: snapshots
+
+          env:
+            - name: LOG_ENABLE_TIMESTAMP
+              value: "{{ .Values.advance_runner.log_enable_timestamp }}"
+
+            - name: LOG_ENABLE_COLOR
+              value: "{{ .Values.advance_runner.log_enable_color }}"
+
+            - name: RUST_LOG
+              value: {{ .Values.advance_runner.rust_log }}
+
+            - name: SESSION_ID
+              value: {{ .Values.advance_runner.session_id }}
+
+            - name: ADVANCE_RUNNER_HEALTHCHECK_PORT
+              value: "{{ .Values.advance_runner.healthcheck_port }}"
+
+            - name: INSPECT_SERVER_ADDRESS
+              value: "0.0.0.0:{{ .Values.advance_runner.http_port }}"
+
+            - name: SERVER_MANAGER_ENDPOINT
+              value: "http://{{ include "rives-node.fullname" . }}-server-manager:{{ .Values.server_manager.port }}"
+
+            - name: REDIS_ENDPOINT
+              value: {{ .Values.redis.endpoint }}
+
+            - name: CHAIN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: id
+
+            - name: PROVIDER_HTTP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: http_endpoint
+
+            - name: DAPP_CONTRACT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: dapp_address
+
+            - name: READER_MODE
+              value: "false"
+
+            - name: MACHINE_SNAPSHOT_PATH
+              value: "{{ .Values.server_manager.snapshot_dir }}"
+
+          ports:
+            - name: advance-health
+              containerPort: {{ .Values.advance_runner.healthcheck_port }}
+              protocol: TCP
+
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: advance-health
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: advance-health
+          resources:
+            {{- toYaml .Values.advance_runner.resources | nindent 12 }}
+
+      volumes:
+        - name: snapshots
+          persistentVolumeClaim:
+            claimName: {{ include "rives-node.fullname" . }}-snapshots
+
+      {{- with .Values.server_manager.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server_manager.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server_manager.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "rives-node.fullname" . }}-snapshots
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  resources:
+    requests:
+      storage: {{ .Values.server_manager.snapshot_storage_size }}
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.server_manager.snapshot_storage_class }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rives-node.fullname" . }}-server-manager
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.server_manager.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+
+  selector:
+    {{- include "rives-node.selectorLabels" . | nindent 4 }}
+    app.kubernets.io/component: server-manager
+
+

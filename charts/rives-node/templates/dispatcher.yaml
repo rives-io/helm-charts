@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rives-node.fullname" . }}-dispatcher
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.dispatcher.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rives-node.selectorLabels" . | nindent 6 }}
+      app.kubernets.io/component: dispatcher
+  template:
+    metadata:
+      {{- with .Values.dispatcher.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rives-node.selectorLabels" . | nindent 8 }}
+        app.kubernets.io/component: dispatcher
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: dispatcher
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          command:
+            - "/usr/bin/cartesi-rollups-dispatcher"
+
+          env:
+            - name: LOG_ENABLE_TIMESTAMP
+              value: "{{ .Values.dispatcher.log_enable_timestamp }}"
+
+            - name: LOG_ENABLE_COLOR
+              value: "{{ .Values.dispatcher.log_enable_color }}"
+
+            - name: RUST_LOG
+              value: {{ .Values.dispatcher.rust_log }}
+
+            - name: REDIS_ENDPOINT
+              value: {{ .Values.redis.endpoint }}
+
+            - name: SC_GRPC_ENDPOINT
+              value: "http://{{ include "rives-node.fullname" . }}-state-server:{{ .Values.state_server.port }}"
+
+            - name: DISPATCHER_HTTP_SERVER_PORT
+              value: "{{ .Values.dispatcher.http_port }}"
+
+            - name: CHAIN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: id
+
+            - name: SC_DEFAULT_CONFIRMATIONS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: finality_offset
+
+            - name: DAPP_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: dapp_address
+
+            - name: DAPP_DEPLOYMENT_BLOCK_NUMBER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: dapp_block
+
+            - name: HISTORY_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: history_address
+
+            - name: AUTHORITY_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: authority_address
+
+            - name: INPUT_BOX_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: input_box_address
+
+            - name: RD_EPOCH_DURATION
+              value: "{{ .Values.dispatcher.epoch_seconds }}"
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.dispatcher.http_port }}
+              protocol: TCP
+
+          resources:
+            {{- toYaml .Values.dispatcher.resources | nindent 12 }}
+
+      {{- with .Values.dispatcher.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dispatcher.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dispatcher.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rives-node.fullname" . }}-dispatcher
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.dispatcher.http_port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+
+  selector:
+    {{- include "rives-node.selectorLabels" . | nindent 4 }}
+    app.kubernets.io/component: dispatcher
+
+

@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rives-node.fullname" . }}-inspect
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.inspect.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rives-node.selectorLabels" . | nindent 6 }}
+      app.kubernets.io/component: inspect
+  template:
+    metadata:
+      {{- with .Values.inspect.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rives-node.selectorLabels" . | nindent 8 }}
+        app.kubernets.io/component: inspect
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: inspect
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          command:
+            - "/usr/bin/cartesi-rollups-inspect-server"
+
+          env:
+            - name: LOG_ENABLE_TIMESTAMP
+              value: "{{ .Values.inspect.log_enable_timestamp }}"
+
+            - name: LOG_ENABLE_COLOR
+              value: "{{ .Values.inspect.log_enable_color }}"
+
+            - name: RUST_LOG
+              value: {{ .Values.inspect.rust_log }}
+
+            - name: SESSION_ID
+              value: {{ .Values.inspect.session_id }}
+
+            - name: INSPECT_SERVER_HEALTHCHECK_PORT
+              value: "{{ .Values.inspect.healthcheck_port }}"
+
+            - name: INSPECT_SERVER_ADDRESS
+              value: "0.0.0.0:{{ .Values.inspect.http_port }}"
+
+            - name: SERVER_MANAGER_ADDRESS
+              value: "{{ include "rives-node.fullname" . }}-server-manager:{{ .Values.server_manager.port }}"
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.inspect.http_port }}
+              protocol: TCP
+
+            - name: healthcheck
+              containerPort: {{ .Values.inspect.healthcheck_port }}
+              protocol: TCP
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthcheck
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: healthcheck
+          resources:
+            {{- toYaml .Values.inspect.resources | nindent 12 }}
+
+      {{- with .Values.inspect.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.inspect.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.inspect.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rives-node.fullname" . }}-inspect
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.inspect.http_port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+
+    - port: {{ .Values.inspect.healthcheck_port }}
+      targetPort: healthcheck
+      protocol: TCP
+      name: healthcheck
+
+  selector:
+    {{- include "rives-node.selectorLabels" . | nindent 4 }}
+    app.kubernets.io/component: inspect
+
+

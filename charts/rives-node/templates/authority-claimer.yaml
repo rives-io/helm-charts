@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rives-node.fullname" . }}-authority-claimer
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.authority.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rives-node.selectorLabels" . | nindent 6 }}
+      app.kubernets.io/component: authority
+  template:
+    metadata:
+      {{- with .Values.authority.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "rives-node.selectorLabels" . | nindent 8 }}
+        app.kubernets.io/component: authority
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      containers:
+        - name: authority
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          command:
+            - "/usr/bin/cartesi-rollups-authority-claimer"
+
+          env:
+            - name: LOG_ENABLE_TIMESTAMP
+              value: "{{ .Values.authority.log_enable_timestamp }}"
+
+            - name: LOG_ENABLE_COLOR
+              value: "{{ .Values.authority.log_enable_color }}"
+
+            - name: RUST_LOG
+              value: {{ .Values.authority.rust_log }}
+
+            - name: REDIS_ENDPOINT
+              value: {{ .Values.redis.endpoint }}
+
+            - name: AUTHORITY_CLAIMER_HTTP_SERVER_PORT
+              value: "{{ .Values.authority.http_port }}"
+
+            - name: TX_PROVIDER_HTTP_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: http_endpoint
+
+            - name: TX_CHAIN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: id
+
+            - name: TX_DEFAULT_CONFIRMATIONS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.blockchain.secretName }}
+                  key: finality_offset
+
+            - name: HISTORY_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: history_address
+
+            - name: AUTHORITY_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: authority_address
+
+            - name: INPUT_BOX_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: input_box_address
+
+            - name: GENESIS_BLOCK
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: input_box_block
+          envFrom:
+            - secretRef:
+                name: {{ .Values.authority.walletSecretName }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.authority.http_port }}
+              protocol: TCP
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+      {{- with .Values.authority.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.authority.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.authority.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rives-node.fullname" . }}-authority-claimer
+  labels:
+    {{- include "rives-node.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.authority.http_port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+
+  selector:
+    {{- include "rives-node.selectorLabels" . | nindent 4 }}
+    app.kubernets.io/component: authority
+
+
