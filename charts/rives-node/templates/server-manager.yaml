@@ -103,7 +103,7 @@ spec:
               value: "0.0.0.0:{{ .Values.advance_runner.http_port }}"
 
             - name: SERVER_MANAGER_ENDPOINT
-              value: "http://{{ include "rives-node.fullname" . }}-server-manager:{{ .Values.server_manager.port }}"
+              value: "http://localhost:{{ .Values.server_manager.port }}"
 
             - name: REDIS_ENDPOINT
               value: {{ .Values.redis.endpoint }}
