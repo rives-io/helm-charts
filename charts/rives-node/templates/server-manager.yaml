@@ -9,7 +9,7 @@ spec:
   selector:
     matchLabels:
       {{- include "rives-node.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: server-manager
+      app.kubernets.io/component: server-manager
   template:
     metadata:
       {{- with .Values.server_manager.podAnnotations }}
@@ -18,7 +18,7 @@ spec:
       {{- end }}
       labels:
         {{- include "rives-node.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: server-manager
+        app.kubernets.io/component: server-manager
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -212,6 +212,4 @@ spec:
 
   selector:
     {{- include "rives-node.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: server-manager
-
-
+    app.kubernets.io/component: server-manager
