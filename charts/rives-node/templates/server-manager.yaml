@@ -9,7 +9,7 @@ spec:
   selector:
     matchLabels:
       {{- include "rives-node.selectorLabels" . | nindent 6 }}
-      app.kubernets.io/component: server-manager
+      app.kubernetes.io/component: server-manager
   template:
     metadata:
       {{- with .Values.server_manager.podAnnotations }}
@@ -18,13 +18,15 @@ spec:
       {{- end }}
       labels:
         {{- include "rives-node.selectorLabels" . | nindent 8 }}
-        app.kubernets.io/component: server-manager
+        app.kubernetes.io/component: server-manager
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
+      securityContext:
+        runAsUser: 0
       initContainers:
         - name: init-snapshots
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -130,6 +132,21 @@ spec:
             - name: MACHINE_SNAPSHOT_PATH
               value: "{{ .Values.server_manager.snapshot_dir }}"
 
+            {{ with .Values.advance_runner.deadline_checkin -}}
+            - name: SM_DEADLINE_CHECKIN
+              value: "{{ . }}"
+            {{- end }}
+
+            {{ with .Values.advance_runner.deadline_advance_state -}}
+            - name: SM_DEADLINE_ADVANCE_STATE
+              value: "{{ . }}"
+            {{- end }}
+
+            {{ with .Values.advance_runner.deadline_inspect_state -}}
+            - name: SM_DEADLINE_INSPECT_STATE
+              value: "{{ . }}"
+            {{- end }}
+
           ports:
             - name: advance-health
               containerPort: {{ .Values.advance_runner.healthcheck_port }}
@@ -195,6 +212,6 @@ spec:
 
   selector:
     {{- include "rives-node.selectorLabels" . | nindent 4 }}
-    app.kubernets.io/component: server-manager
+    app.kubernetes.io/component: server-manager
 
 

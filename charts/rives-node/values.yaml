@@ -213,7 +213,9 @@ advance_runner:
   log_enable_color: "false"
   rust_log: info
   session_id: default_session_id
-
+  deadline_checkin: null # default: 5*1000 (ms?)
+  deadline_advance_state: null # default: 3 * 60 * 1000 (ms)
+  deadline_inspect_state: null # default: 3 * 60 * 1000 (ms)
 
 
 serviceAccount:
