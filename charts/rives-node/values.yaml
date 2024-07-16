@@ -143,7 +143,7 @@ dispatcher:
   log_enable_timestamp: "false"
   log_enable_color: "false"
   rust_log: info
-  epoch_seconds: 3600
+  epoch_blocks: 7200
 
 server_manager:
   # Server Manager pod parameters

@@ -94,8 +94,8 @@ spec:
                   name: {{ .Values.dapp.configMapName }}
                   key: input_box_address
 
-            - name: RD_EPOCH_DURATION
-              value: "{{ .Values.dispatcher.epoch_seconds }}"
+            - name: RD_EPOCH_LENGTH
+              value: "{{ .Values.dispatcher.epoch_blocks }}"
 
           ports:
             - name: http
