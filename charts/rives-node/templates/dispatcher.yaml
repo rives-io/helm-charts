@@ -70,11 +70,11 @@ spec:
                   name: {{ .Values.dapp.configMapName }}
                   key: dapp_address
 
-            - name: DAPP_DEPLOYMENT_BLOCK_NUMBER
+            - name: INPUT_BOX_DEPLOYMENT_BLOCK_NUMBER
               valueFrom:
                 configMapKeyRef:
                   name: {{ .Values.dapp.configMapName }}
-                  key: dapp_block
+                  key: input_box_block
 
             - name: HISTORY_ADDRESS
               valueFrom:
