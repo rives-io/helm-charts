@@ -1,0 +1,111 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "reader-node.fullname" . }}-nfs-pvc
+  labels:
+    {{- include "reader-node.labels" . | nindent 4 }}
+spec:
+  resources:
+    requests:
+      storage: {{ .Values.nfs_server.storage.size }}
+  storageClassName: {{ .Values.nfs_server.storage.class }}
+  accessModes:
+    {{- toYaml .Values.nfs_server.storage.accessModes | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reader-node.fullname" . }}-nfs-server
+  labels:
+    {{- include "reader-node.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "reader-node.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: nfs-server
+  template:
+    metadata:
+      {{- with .Values.nfs_server.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "reader-node.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: nfs-server
+    spec:
+      {{- with .Values.nfs_server.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+        - name: init-shares
+          image: "{{ .Values.nfs_server.init_image.repository }}:{{ .Values.nfs_server.init_image.tag }}"
+          command:
+            - sh
+            - "-c"
+            - 'mkdir -p -m 0777 {{ range $index, $element := .Values.nfs_server.shares -}}
+                {{- if $index }} {{ end -}}{{ print "/exports/" $element | quote -}}
+              {{ end }}'
+          volumeMounts:
+            - name: storage
+              mountPath: /exports
+
+      containers:
+        - name: nfs-server
+          image: "{{ .Values.nfs_server.image.repository }}:{{ .Values.nfs_server.image.tag }}"
+          imagePullPolicy: {{ .Values.nfs_server.image.pullPolicy }}
+          ports:
+          - name: nfs
+            containerPort: 2049
+          - name: mountd
+            containerPort: 20048
+          - name: rpcbind
+            containerPort: 111
+          securityContext:
+            privileged: true
+
+          resources:
+            {{- toYaml .Values.nfs_server.resources | nindent 12 }}
+
+          volumeMounts:
+            - name: storage
+              mountPath: /exports
+
+      volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: {{ include "reader-node.fullname" . }}-nfs-pvc
+
+      {{- with .Values.nfs_server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nfs_server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nfs_server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reader-node.fullname" . }}-nfs-server
+  labels:
+    {{- include "reader-node.labels" . | nindent 4 }}
+spec:
+  clusterIP: {{ .Values.nfs_server.clusterIP }}
+  ports:
+    - name: nfs
+      port: 2049
+    - name: mountd
+      port: 20048
+    - name: rpcbind
+      port: 111
+  selector:
+    {{- include "reader-node.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: nfs-server

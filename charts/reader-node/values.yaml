@@ -1,0 +1,130 @@
+# Default values for reader-node.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+nameOverride: ""
+fullnameOverride: ""
+
+watcher:
+
+  image:
+    repository: ghcr.io/rives-io/reader-node-watcher
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "20240712.1127.9de0942"
+
+  memory_request: ""
+
+  affinity: {}
+  tolerations: []
+
+  replicas: 3
+
+node:
+  imagePullSecrets: []
+  image:
+    repository: cartesi/rollups-node
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: 1.4.0
+
+  nfs_share: "/reader_node"
+
+  chain_secret:
+    secretName: chain-secret
+    ws_endpoint_key: ws_endpoint
+
+  dapp_deployment:
+    configMapName: dapp-deployment
+    input_box_address_key: input_box_address
+    dapp_address_key: dapp_address
+    dapp_block_key: dapp_block
+
+
+
+advance:
+  # Information specific to the advance deployment
+  podAnnotations: {}
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  storage:
+    size: 4Gi
+    class: standard
+    accessModes:
+      - ReadWriteOnce
+
+nfs_server:
+  podAnnotations: {}
+  imagePullSecrets: []
+  image:
+    repository: k8s.gcr.io/volume-nfs
+    tag: 0.8
+    pullPolicy: IfNotPresent
+
+  init_image:
+    repository: busybox
+    tag: 1.36
+    pullPolicy: IfNotPresent
+
+  shares:
+    - reader_node
+
+  storage:
+    size: 2Gi
+    class: standard
+    accessModes:
+      - ReadWriteOnce
+
+  clusterIP: 10.32.14.253
+
+  resources: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

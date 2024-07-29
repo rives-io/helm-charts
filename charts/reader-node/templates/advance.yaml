@@ -1,0 +1,226 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "reader-node.fullname" . }}-advance-images
+  labels:
+    {{- include "reader-node.labels" . | nindent 4 }}
+spec:
+  resources:
+    requests:
+      storage: {{ .Values.advance.storage.size }}
+  storageClassName: {{ .Values.advance.storage.class }}
+  accessModes:
+    {{- toYaml .Values.advance.storage.accessModes | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reader-node.fullname" . }}-advance
+  labels:
+    {{- include "reader-node.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "reader-node.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: advance
+  template:
+    metadata:
+      {{- with .Values.advance.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "reader-node.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: advance
+    spec:
+      serviceAccountName: {{ include "reader-node.serviceAccountName" . }}
+      {{- with .Values.node.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      initContainers:
+        - name: init-permissions
+          image: "{{ .Values.nfs_server.init_image.repository }}:{{ .Values.nfs_server.init_image.tag }}"
+          command:
+            - sh
+            - "-c"
+            - |
+              if [[ ! -f /srv/snapshots ]]; then
+                mkdir -p /srv/snapshots
+                chown 102:102 /srv/snapshots
+              fi
+
+          volumeMounts:
+            - name: local-images
+              mountPath: /srv
+            - name: storage
+              mountPath: /shared
+
+      containers:
+        - name: watcher
+          image: "{{ .Values.watcher.image.repository }}:{{ .Values.watcher.image.tag }}"
+          imagePullPolicy: {{ .Values.watcher.image.pullPolicy }}
+          env:
+
+            - name: DAPP_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.node.dapp_deployment.configMapName }}
+                  key: {{ .Values.node.dapp_deployment.dapp_address_key }}
+
+            - name: RELEASE
+              value: {{ include "reader-node.fullname" . }}
+
+            - name: IMAGES_DIR
+              value: /srv/snapshots/images
+
+            - name: OUTPUT_DIR
+              value: /shared/$(DAPP_ADDRESS)/
+
+            - name: NODE_REPLICAS
+              value: "{{ .Values.watcher.replicas }}"
+
+            - name: NODE_IMAGE
+              value: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag }}"
+
+            {{- with .Values.node.imagePullSecrets }}
+            - name: IMAGE_PULL_SECRET_NAME
+              value: {{ (index . 0).name }}
+            {{- end }}
+
+            - name: NAMESPACE
+              value: {{ .Release.Namespace }}
+
+            - name: NFS_IP
+              value: {{ .Values.nfs_server.clusterIP }}
+
+            - name: NFS_SHARE
+              value: {{ .Values.node.nfs_share }}
+            {{- with .Values.watcher.memory_request }}
+            - name: MEMORY_REQUEST
+              value: "{{ . }}"
+            {{- end }}
+
+            {{- with .Values.watcher.affinity }}
+            - name: AFFINITY
+              value: {{ . | toJson | quote }}
+            {{- end }}
+
+            {{- with .Values.watcher.tolerations }}
+            - name: TOLERATIONS
+              value: {{ . | toJson | quote }}
+            {{- end }}
+
+          volumeMounts:
+            - name: local-images
+              mountPath: /srv
+
+            - name: storage
+              mountPath: /shared
+
+        - name: advance
+          image: "{{ .Values.node.image.repository }}:{{ .Values.node.image.tag }}"
+          imagePullPolicy: {{ .Values.node.image.pullPolicy }}
+          command:
+            - /bin/bash
+            - "-c"
+            - >-
+              if [[ -f /srv/snapshots/images/latest_block ]]
+              then
+                BLOCK=$(cat /srv/snapshots/images/latest_block) ;
+                BLOCK=$((BLOCK + 1)) ;
+              else BLOCK=${DAPP_BLOCK} ;
+              fi ;
+              nonodo
+              --rpc-url=${WSS_ENDPOINT}
+              --contracts-input-box-address=${INPUT_BOX_ADDRESS}
+              --contracts-application-address=${DAPP_ADDRESS}
+              --contracts-input-box-block=${BLOCK}
+              --http-address=0.0.0.0
+              --http-port=8080
+              --disable-devnet
+              --
+              cm-caller
+              -image=/tmp/machine-snapshots/0
+              -store-path=/srv/snapshots/images
+              -remote-delay 3
+              -disable-consistency-checks
+
+          env:
+            - name: WSS_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.node.chain_secret.secretName }}
+                  key: {{ .Values.node.chain_secret.ws_endpoint_key }}
+
+            - name: INPUT_BOX_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.node.dapp_deployment.configMapName }}
+                  key: {{ .Values.node.dapp_deployment.input_box_address_key }}
+
+            - name: DAPP_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.node.dapp_deployment.configMapName }}
+                  key: {{ .Values.node.dapp_deployment.dapp_address_key }}
+
+            - name: DAPP_BLOCK
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.node.dapp_deployment.configMapName }}
+                  key: {{ .Values.node.dapp_deployment.dapp_block_key }}
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          resources:
+            {{- toYaml .Values.advance.resources | nindent 12 }}
+
+          volumeMounts:
+            - name: local-images
+              mountPath: /srv
+            - name: storage
+              mountPath: /shared
+
+
+      volumes:
+        - name: storage
+          nfs:
+            server: {{ .Values.nfs_server.clusterIP }}
+            path: {{ .Values.node.nfs_share }}
+
+        - name: local-images
+          persistentVolumeClaim:
+            claimName: {{ include "reader-node.fullname" . }}-advance-images
+
+      {{- with .Values.advance.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.advance.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.advance.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reader-node.fullname" . }}-advance
+  labels:
+    {{- include "reader-node.labels" . | nindent 4 }}
+spec:
+  ports:
+    - name: http
+      port: 8080
+  selector:
+    {{- include "reader-node.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: advance
