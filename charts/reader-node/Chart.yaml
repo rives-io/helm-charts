@@ -1,4 +1,4 @@
-apiVersion: v2
+apiVersion: v3-beta
 name: reader-node
 description: Deployment of the reader node
 type: application
