@@ -145,8 +145,9 @@ spec:
               cm-caller
               -image=/tmp/machine-snapshots/0
               -store-path=/srv/snapshots/images
-              -remote-delay 3
               -disable-consistency-checks
+              -disable-remote
+              -disable-inspect
 
           env:
             - name: WSS_ENDPOINT
