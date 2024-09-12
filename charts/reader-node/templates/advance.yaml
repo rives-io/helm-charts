@@ -145,9 +145,8 @@ spec:
           imagePullPolicy: {{ .Values.node.image.pullPolicy }}
           command:
             - /bin/bash
-            - "-c"
+            - "-xc"
             - >-
-              set -x ;
               if [[ -f /srv/snapshots/images/latest_block ]]
               then
                 BLOCK=$(cat /srv/snapshots/images/latest_block) ;
@@ -164,7 +163,7 @@ spec:
               --disable-devnet
               --
               cm-caller
-              -image=/tmp/machine-snapshots/0_0"
+              -image=/tmp/machine-snapshots/0_0
               -store-path=/srv/snapshots/images
               -disable-consistency-checks
               -disable-remote

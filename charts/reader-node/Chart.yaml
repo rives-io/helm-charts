@@ -2,5 +2,5 @@ apiVersion: v2
 name: reader-node
 description: Deployment of the reader node
 type: application
-version: 0.2.0-beta3
+version: 0.2.0-beta4
 appVersion: "0.1.0"
