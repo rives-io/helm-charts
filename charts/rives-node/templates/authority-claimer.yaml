@@ -85,6 +85,12 @@ spec:
                   name: {{ .Values.dapp.configMapName }}
                   key: input_box_address
 
+            - name: DAPP_CONTRACT_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.dapp.configMapName }}
+                  key: dapp_address
+
             - name: GENESIS_BLOCK
               valueFrom:
                 configMapKeyRef:
