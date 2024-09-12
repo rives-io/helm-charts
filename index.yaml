@@ -3,6 +3,16 @@ entries:
   reader-node:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2024-09-12T01:39:31.619357148Z"
+    description: Deployment of the reader node
+    digest: a5edddcafc3538cea1d511bd20b6ba71b6a80893c741d27db6d9c0de5d58a726
+    name: reader-node
+    type: application
+    urls:
+    - https://github.com/rives-io/helm-charts/releases/download/reader-node-0.2.0-beta2/reader-node-0.2.0-beta2.tgz
+    version: 0.2.0-beta2
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2024-08-27T23:07:40.752714186Z"
     description: Deployment of the reader node
     digest: 9aeb7f13c5ae7dc752af7ca3b2691240f4415f8e67cf2ea42f9f14e8fa1d2877
@@ -32,6 +42,16 @@ entries:
     - https://github.com/rives-io/helm-charts/releases/download/reader-node-0.1.0/reader-node-0.1.0.tgz
     version: 0.1.0
   rives-node:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2024-09-12T01:39:31.717909063Z"
+    description: An opinionated Cartesi Node chart
+    digest: 1bfb46f6e28d531e638d6335c7545c29740178a5297c1d0961ef8a45cf6d2c03
+    name: rives-node
+    type: application
+    urls:
+    - https://github.com/rives-io/helm-charts/releases/download/rives-node-0.1.5/rives-node-0.1.5.tgz
+    version: 0.1.5
   - apiVersion: v2
     appVersion: 0.1.0
     created: "2024-09-11T22:42:15.512410545Z"
@@ -72,4 +92,4 @@ entries:
     urls:
     - https://github.com/rives-io/helm-charts/releases/download/rives-node-0.1.1/rives-node-0.1.1.tgz
     version: 0.1.1
-generated: "2024-09-11T22:42:15.512436203Z"
+generated: "2024-09-12T01:39:31.717946572Z"
