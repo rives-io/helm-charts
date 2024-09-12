@@ -100,7 +100,7 @@ spec:
               value: {{ .Values.node.nfs_share }}
             {{- with .Values.watcher.memory_request }}
             - name: MEMORY_REQUEST
-              value: "{{ . }}"
+              value: {{ . | quote}}
             {{- end }}
 
             {{- with .Values.watcher.affinity }}
@@ -115,12 +115,12 @@ spec:
 
             {{- with .Values.watcher.data_replicas }}
             - name: DATA_REPLICAS
-              value: "{{ . }}"
+              value: {{ . | quote }}
             {{- end }}
 
             {{- with .Values.watcher.data_memory_request }}
             - name: DATA_MEMORY_REQUEST
-              value: "{{ . }}"
+              value: {{ . | quote }}
             {{- end }}
 
             {{- with .Values.watcher.data_affinity }}
@@ -147,6 +147,7 @@ spec:
             - /bin/bash
             - "-c"
             - >-
+              set -x ;
               if [[ -f /srv/snapshots/images/latest_block ]]
               then
                 BLOCK=$(cat /srv/snapshots/images/latest_block) ;
