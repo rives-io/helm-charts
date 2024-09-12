@@ -103,15 +103,15 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
 
-      {{- with .Values.nodeSelector }}
+      {{- with .Values.graphql.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.affinity }}
+      {{- with .Values.graphql.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .Values.graphql.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
