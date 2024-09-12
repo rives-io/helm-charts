@@ -18,6 +18,11 @@ watcher:
   affinity: {}
   tolerations: []
 
+  data_affinity: {}
+  data_tolerations: []
+  data_replicas: 1
+  data_memory_request: ""
+
   replicas: 3
 
 node:
