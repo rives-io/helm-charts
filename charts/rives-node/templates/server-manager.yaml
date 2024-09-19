@@ -152,6 +152,11 @@ spec:
               value: "{{ . }}"
             {{- end }}
 
+            {{ with .Values.advance_runner.deadline_fast -}}
+            - name: SM_DEADLINE_FAST
+              value: "{{ . }}"
+            {{- end }}
+
           ports:
             - name: advance-health
               containerPort: {{ .Values.advance_runner.healthcheck_port }}

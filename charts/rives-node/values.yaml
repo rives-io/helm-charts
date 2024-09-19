@@ -217,7 +217,7 @@ advance_runner:
   deadline_advance_state: null # default: 3 * 60 * 1000 (ms)
   deadline_inspect_state: null # default: 3 * 60 * 1000 (ms)
   deadline_machine: null # default: 5 * 60 * 1000 (ms)
-
+  deadline_fast: null # default: 5 * 1000 (ms)
 
 serviceAccount:
   # Specifies whether a service account should be created
