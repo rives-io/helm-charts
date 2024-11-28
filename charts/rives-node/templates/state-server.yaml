@@ -46,6 +46,9 @@ spec:
             - name: SF_CONCURRENT_EVENTS_FETCH
               value: "{{ .Values.state_server.concurrent_events_fetch }}"
 
+            - name: SF_QUERY_LIMIT_ERROR_CODES
+              value: "{{ .Values.state_server.query_limit_error_codes }}"
+
             - name: SS_SERVER_ADDRESS
               value: "0.0.0.0:{{ .Values.state_server.port }}"
 

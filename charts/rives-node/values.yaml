@@ -122,6 +122,7 @@ state_server:
   log_enable_color: "false"
   rust_log: info
   concurrent_events_fetch: 1
+  query_limit_error_codes: "-32602"
 
 dispatcher:
   # GraphQL Server pod parameters
