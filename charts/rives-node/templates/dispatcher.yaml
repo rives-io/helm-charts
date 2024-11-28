@@ -34,7 +34,7 @@ spec:
             - "-u"
             - "{{ .Values.redis.endpoint }}"
             - "eval"
-            - 'local keys = redis.call("keys", "{chain-") ; for i = 1, #keys do redis.call("del", keys[i]); end; return key'
+            - 'local keys = redis.call("keys", "{chain-") ; for i = 1, #keys do redis.call("del", keys[i]); end; return keys'
             - "0"
 
       containers:
