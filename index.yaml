@@ -84,6 +84,16 @@ entries:
   rives-node:
   - apiVersion: v2
     appVersion: 0.1.0
+    created: "2024-11-28T04:44:24.034314623Z"
+    description: An opinionated Cartesi Node chart
+    digest: ff1b9f0159ec285f943c8280d6e244c353a9cc876c7012fa97530474ec490461
+    name: rives-node
+    type: application
+    urls:
+    - https://github.com/rives-io/helm-charts/releases/download/rives-node-0.1.10/rives-node-0.1.10.tgz
+    version: 0.1.10
+  - apiVersion: v2
+    appVersion: 0.1.0
     created: "2024-11-28T04:34:07.835633368Z"
     description: An opinionated Cartesi Node chart
     digest: 01b8c65d9bbbbe2fcbf9bff8a2c743347405abe7c2be8466d65ee736bcf88da7
@@ -172,4 +182,4 @@ entries:
     urls:
     - https://github.com/rives-io/helm-charts/releases/download/rives-node-0.1.1/rives-node-0.1.1.tgz
     version: 0.1.1
-generated: "2024-11-28T04:34:07.835696064Z"
+generated: "2024-11-28T04:44:24.034380857Z"
