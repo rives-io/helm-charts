@@ -25,26 +25,18 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
 
-      initContainers:
-        - name: cleanup-redis
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command:
-            - "/usr/bin/redis-cli"
-            - "-u"
-            - "{{ .Values.redis.endpoint }}"
-            - "--no-raw"
-            - "eval"
-            - 'local keys = redis.call("keys", "{chain-*") ; for i = 1, #keys do redis.call("del", keys[i]); end; return keys'
-            - "0"
-
       containers:
         - name: dispatcher
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
 
           command:
-            - "/usr/bin/cartesi-rollups-dispatcher"
+            - /usr/bin/bash
+            - '-c'
+            - |
+              set -x
+              redis-cli -u {{ .Values.redis.endpoint }} --no-raw eval 'local keys = redis.call("keys", "{chain-*") ; for i = 1, #keys do redis.call("del", keys[i]); end; return keys' 0
+              exec /usr/bin/cartesi-rollups-dispatcher
 
           env:
             - name: LOG_ENABLE_TIMESTAMP
